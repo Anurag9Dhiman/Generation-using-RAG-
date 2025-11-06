@@ -1,0 +1,12 @@
+chromadb
+sentence-transformers
+transformers
+torch
+faiss-cpu
+python-dotenv
+rich
+nbformat
+
+
+# optional (for faster tokenizers)
+# tokenizers
