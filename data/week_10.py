@@ -1,0 +1,46 @@
+from week_9 import ListStorage, AbstractStructure
+
+
+# Deque (Double-Ended Queue)
+
+class Deque(AbstractStructure):
+
+
+    def insert_front(self, item):
+        if self._storage.is_full():
+            raise OverflowError("Deque is full")
+        self._storage.insert_front(item)
+
+    def insert_rear(self, item):
+        if self._storage.is_full():
+            raise OverflowError("Deque is full")
+        self._storage.insert_rear(item)
+
+    def delete_front(self):
+        if self._storage.is_empty():
+            raise IndexError("Deque is empty")
+        return self._storage.remove_front()
+
+    def delete_rear(self):
+        if self._storage.is_empty():
+            raise IndexError("Deque is empty")
+        return self._storage.remove_rear()
+
+    # Optional: to maintain consistency with AbstractStructure
+    def enqueue(self, item):
+        self.insert_rear(item)
+
+    def dequeue(self):
+        return self.delete_front()
+    
+if __name__ == "__main__":
+    print("---- DEQUE DEMO ----")
+    deque_storage = ListStorage(max_size=5)
+    deque = Deque(deque_storage)
+
+    deque.insert_rear(10)
+    deque.insert_rear(20)
+    deque.insert_front(5)
+    print("Deleted front:", deque.delete_front())  # 5
+    print("Deleted rear:", deque.delete_rear())    # 20
+    print("Deque size:", deque.size())    
