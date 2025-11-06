@@ -1,0 +1,510 @@
+# Build a Pluggable Notifier
+
+Make a small notification library that can send messages by “email” or “sms”. You should be able to add new types later without changing existing code.
+
+## What to build
+
+1) **Common interface (ABC)**
+
+
+
+*   Create an abstract class `Notifier` with one abstract method:
+   
+    *  `send(self, msg: str) -> bool`
+
+        (Return `True` on success, `False` on failure.)
+
+
+2) **Two concrete classes**
+
+*  `EmailNotifier` and `SMSNotifier` inherit from `Notifier`.
+
+* No real I/O: just `print(...)` the message and return `True`.
+
+3) **Retry decorator**
+
+* Write `@retry(n=3)` that retries a function up to `n` times only if it returns `False`.
+
+* Must use `functools.wraps`.
+
+* Use this to wrap `send`.
+
+4) **Factory method**
+
+* Add `@classmethod from_config(cls, cfg: dict)` on `Notifier`.
+
+* `cfg["type"]` decides which subclass to create: `"email"` → `EmailNotifier`, `"sms"` → `SMSNotifier`.
+
+* Pass other keys in `cfg` to the constructor as needed.
+
+* If the type is unknown, raise `ValueError`.
+
+5) **Message formatter**
+
+* Add `@staticmethod format_message(user, msg) -> str`.
+
+* Return a simple string like: `"To <user>: <msg>"`.
+
+   * If `user` is a dict, prefer `name`, otherwise `email/phone`. If `user` is a string, use it directly.
+
+6) **Rate limit property**
+
+* On `Notifier`, add a `rate_limit` property backed by `_rate_limit`.
+
+* Getter: returns current value (or `None`).
+
+* Setter: must accept only positive integers; otherwise raise `ValueError`.
+
+* Deleter: “disable” rate limiting (e.g., set to `None`).
+
+**Show it working**
+
+Create notifiers using configs like:
+
+`{"type": "email", "to": "alice@example.com", "rate_limit": 60}`
+
+`{"type": "sms", "phone": "+911234567890"}`
+
+Use `Notifier.format_message(...)` to build a message.
+
+Call `.send(...)` (with the retry decorator applied).
+
+Set `rate_limit`, then delete it.
+
+### Include 3–4 tiny tests (can be simple asserts)
+
+1) Factory: correct subclass is returned; unknown type raises `ValueError`.
+
+2) Retry: a function wrapped with `@retry(n=3)` returns False twice then `True` → final result should be `True`.
+
+3) Property: `setting rate_limit = -5` (or non-int) raises `ValueError`; deleting sets it to `None`.
+
+4) Formatter: `format_message({"name": "Hello"}, "Hi") → "To Hello: Hi"` (or similar).
+from abc import ABC, abstractmethod
+from functools import wraps
+
+
+
+# Retry decorator
+
+def retry(n=3):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            attempts = 0
+            while attempts < n:
+                result = func(*args, **kwargs)
+                if result:
+                    return True
+                attempts += 1
+            return False
+        return wrapper
+    return decorator
+
+
+
+# Abstract Base Notifier
+
+class Notifier(ABC):
+    def __init__(self, **kwargs):
+        self._rate_limit = kwargs.get("rate_limit")
+
+    @abstractmethod
+    def send(self, msg: str) -> bool:
+        pass
+
+    #  Factory method 
+    @classmethod
+    def from_config(cls, cfg: dict):
+        t = cfg.get("type")
+        if t == "email":
+            return EmailNotifier(**cfg)
+        elif t == "sms":
+            return SMSNotifier(**cfg)
+        else:
+            raise ValueError(f"Unknown notifier type: {t}")
+
+    #  Formatter 
+    @staticmethod
+    def format_message(user, msg: str) -> str:
+        if isinstance(user, dict):
+            name = user.get("name") or user.get("email") or user.get("phone")
+            return f"To {name}: {msg}"
+        elif isinstance(user, str):
+            return f"To {user}: {msg}"
+        else:
+            raise TypeError("user must be dict or str")
+
+    #  Rate limit property 
+    @property
+    def rate_limit(self):
+        return self._rate_limit
+
+    @rate_limit.setter
+    def rate_limit(self, value):
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError("rate_limit must be a positive integer")
+        self._rate_limit = value
+
+    @rate_limit.deleter
+    def rate_limit(self):
+        self._rate_limit = None
+
+
+
+# Concrete Classes
+
+class EmailNotifier(Notifier):
+    def __init__(self, to=None, **kwargs):
+        super().__init__(**kwargs)
+        self.to = to
+
+    @retry(n=3)
+    def send(self, msg: str) -> bool:
+        print(f"[EMAIL] To {self.to}: {msg}")
+        return True
+
+
+class SMSNotifier(Notifier):
+    def __init__(self, phone=None, **kwargs):
+        super().__init__(**kwargs)
+        self.phone = phone
+
+    @retry(n=3)
+    def send(self, msg: str) -> bool:
+        print(f"[SMS] To {self.phone}: {msg}")
+        return True
+
+
+
+# Demonstration
+
+if __name__ == "__main__":
+    email_cfg = {"type": "email", "to": "alice@example.com", "rate_limit": 60}
+    sms_cfg = {"type": "sms", "phone": "+911234567890"}
+
+    email_notifier = Notifier.from_config(email_cfg)
+    sms_notifier = Notifier.from_config(sms_cfg)
+
+    # Format and send messages
+    msg1 = Notifier.format_message({"name": "Alice"}, "Welcome aboard!")
+    email_notifier.send(msg1)
+
+    msg2 = Notifier.format_message("Bob", "Your OTP is 1234")
+    sms_notifier.send(msg2)
+
+    # Play with rate_limit
+    print("Initial rate_limit:", email_notifier.rate_limit)
+    email_notifier.rate_limit = 30
+    print("Updated rate_limit:", email_notifier.rate_limit)
+    del email_notifier.rate_limit
+    print("Deleted rate_limit:", email_notifier.rate_limit)
+
+
+
+# Tiny Tests
+
+def _test_factory():
+    e = Notifier.from_config({"type": "email", "to": "x"})
+    s = Notifier.from_config({"type": "sms", "phone": "y"})
+    assert isinstance(e, EmailNotifier)
+    assert isinstance(s, SMSNotifier)
+    try:
+        Notifier.from_config({"type": "other"})
+    except ValueError:
+        pass
+    else:
+        assert False, "Expected ValueError"
+
+
+def _test_retry():
+    calls = {"count": 0}
+
+    @retry(n=3)
+    def flaky():
+        calls["count"] += 1
+        if calls["count"] < 3:
+            return False
+        return True
+
+    assert flaky() is True
+    assert calls["count"] == 3
+
+
+def _test_property():
+    n = EmailNotifier(to="test@example.com")
+    try:
+        n.rate_limit = -5
+    except ValueError:
+        pass
+    else:
+        assert False, "Expected ValueError"
+    n.rate_limit = 10
+    assert n.rate_limit == 10
+    del n.rate_limit
+    assert n.rate_limit is None
+
+
+def _test_formatter():
+    msg = Notifier.format_message({"name": "Hello"}, "Hi")
+    assert msg == "To Hello: Hi"
+
+
+if __name__ == "__main__":
+    _test_factory()
+    _test_retry()
+    _test_property()
+    _test_formatter()
+    print("\nAll tests passed ")
+
+# Orders Mini-Service (SRP + OCP)
+
+Build a tiny orders service that is easy to change without editing existing code.
+
+Use:
+
+* SRP (Single Responsibility Principle): each class does one clear job.
+
+* OCP (Open/Closed Principle): you can add new features by adding new classes, not by changing old ones.
+
+**What to build (must-have)**
+
+1) Clear modules (SRP)
+
+   * `OrderRepository` — saves/loads orders (can be in-memory or stub; no real DB).
+
+   * `PaymentProcessor` (Strategy) — supports:
+
+     * `CardPayment`
+
+     * `UPIPayment`
+
+   * `InvoiceGenerator` (Strategy) — supports:
+
+     * `HtmlInvoice`
+
+     * `PdfInvoice` (can be a stub that just returns a string)
+
+   * `OrderService` — only orchestrates: create order → take payment → generate invoice.
+
+2) Extensibility (OCP)
+
+    * You must be able to add `WalletPayment` or `MarkdownInvoice` without editing `OrderService` (and without big if/elif blocks).
+
+    * Prefer self-registration (e.g., a small registry/factory where new classes register themselves).
+
+
+
+* Domain events: `order_paid`, `invoice_generated` with pluggable handlers.
+
+* Validation pipeline: configurable rules (e.g., item count > 0, total > 0).
+
+* Config-driven wiring: choose payment/invoice types from a config file (JSON/YAML) instead of hardcoding.
+
+**Tests**
+
+* Include at least 2 negative cases (e.g., payment failure, invalid order).
+* For the “add a new type” proof, actually add one (e.g., `WalletPayment`) and show no changes were needed in `OrderService`.
+
+import uuid
+import json
+from abc import ABC, abstractmethod
+
+
+
+# Registry for OCP
+
+class Registry:
+    payments = {}
+    invoices = {}
+
+    @classmethod
+    def register_payment(cls, name):
+        def wrapper(subclass):
+            cls.payments[name] = subclass
+            return subclass
+        return wrapper
+
+    @classmethod
+    def register_invoice(cls, name):
+        def wrapper(subclass):
+            cls.invoices[name] = subclass
+            return subclass
+        return wrapper
+
+
+# Order Repository (SRP)
+
+class OrderRepository:
+    def __init__(self):
+        self._store = {}
+
+    def save(self, order):
+        self._store[order["id"]] = order
+        return order
+
+    def get(self, order_id):
+        return self._store.get(order_id)
+
+
+# Payment Processor (Strategy + SRP)
+
+class PaymentProcessor(ABC):
+    @abstractmethod
+    def pay(self, order) -> bool:
+        pass
+
+
+@Registry.register_payment("card")
+class CardPayment(PaymentProcessor):
+    def pay(self, order) -> bool:
+        print(f"Processing Card Payment for {order['total']}")
+        return True  # stub success
+
+
+@Registry.register_payment("upi")
+class UPIPayment(PaymentProcessor):
+    def pay(self, order) -> bool:
+        print(f"Processing UPI Payment for {order['total']}")
+        return True  # stub success
+
+
+# Invoice Generator (Strategy + SRP)
+
+class InvoiceGenerator(ABC):
+    @abstractmethod
+    def generate(self, order) -> str:
+        pass
+
+
+@Registry.register_invoice("html")
+class HtmlInvoice(InvoiceGenerator):
+    def generate(self, order) -> str:
+        return f"<html><body><h1>Invoice for {order['id']}</h1><p>Total: {order['total']}</p></body></html>"
+
+
+@Registry.register_invoice("pdf")
+class PdfInvoice(InvoiceGenerator):
+    def generate(self, order) -> str:
+        return f"PDF(INVOICE: {order['id']} TOTAL: {order['total']})"
+
+
+# Validation Rules (SRP)
+
+class ValidationRule(ABC):
+    @abstractmethod
+    def validate(self, order) -> None:
+        pass
+
+
+class ItemCountRule(ValidationRule):
+    def validate(self, order):
+        if len(order.get("items", [])) == 0:
+            raise ValueError("Order must have at least one item")
+
+
+class TotalPositiveRule(ValidationRule):
+    def validate(self, order):
+        if order.get("total", 0) <= 0:
+            raise ValueError("Order total must be positive")
+
+
+# Domain Events (pluggable)
+
+class EventBus:
+    def __init__(self):
+        self._handlers = {}
+
+    def subscribe(self, event_name, handler):
+        self._handlers.setdefault(event_name, []).append(handler)
+
+    def publish(self, event_name, data):
+        for h in self._handlers.get(event_name, []):
+            h(data)
+
+
+# Order Service (Orchestration Only)
+
+class OrderService:
+    def __init__(self, repo, bus, rules, config):
+        self.repo = repo
+        self.bus = bus
+        self.rules = rules
+        self.config = config
+
+    def create_order(self, items, total):
+        order = {"id": str(uuid.uuid4()), "items": items, "total": total}
+        # Validation
+        for rule in self.rules:
+            rule.validate(order)
+        self.repo.save(order)
+
+        # Payment
+        pay_type = self.config["payment"]
+        payment_cls = Registry.payments[pay_type]
+        payment = payment_cls()
+        success = payment.pay(order)
+        if not success:
+            raise RuntimeError("Payment failed")
+        self.bus.publish("order_paid", order)
+
+        # Invoice
+        inv_type = self.config["invoice"]
+        inv_cls = Registry.invoices[inv_type]
+        invoice = inv_cls().generate(order)
+        self.bus.publish("invoice_generated", invoice)
+        return order, invoice
+
+
+# Demo + Tests
+
+if __name__ == "__main__":
+    # Config-driven wiring
+    config = {"payment": "card", "invoice": "html"}
+    repo = OrderRepository()
+    bus = EventBus()
+    rules = [ItemCountRule(), TotalPositiveRule()]
+
+    # Subscribing to events
+    bus.subscribe("order_paid", lambda order: print(f"[EVENT] Order Paid: {order['id']}"))
+    bus.subscribe("invoice_generated", lambda inv: print(f"[EVENT] Invoice Generated:\n{inv}"))
+
+    service = OrderService(repo, bus, rules, config)
+
+    # Valid order
+    order, invoice = service.create_order(items=["book", "pen"], total=100)
+    print("Final Invoice:\n", invoice)
+
+    # ------------------
+    # Negative Test 1: Invalid order (no items)
+    try:
+        service.create_order(items=[], total=50)
+    except ValueError as e:
+        print("Expected Validation Error:", e)
+
+    # Negative Test 2: Payment failure (fake override)
+    @Registry.register_payment("failpay")
+    class FailPayment(PaymentProcessor):
+        def pay(self, order) -> bool:
+            return False
+
+    bad_config = {"payment": "failpay", "invoice": "pdf"}
+    bad_service = OrderService(repo, bus, rules, bad_config)
+    try:
+        bad_service.create_order(items=["x"], total=10)
+    except RuntimeError as e:
+        print("Expected Payment Error:", e)
+
+    # Proof of OCP: add new type without editing old code
+    @Registry.register_payment("wallet")
+    class WalletPayment(PaymentProcessor):
+        def pay(self, order) -> bool:
+            print(f"Processing Wallet Payment for {order['total']}")
+            return True
+
+    new_config = {"payment": "wallet", "invoice": "pdf"}
+    new_service = OrderService(repo, bus, rules, new_config)
+    order, invoice = new_service.create_order(items=["mouse"], total=500)
+    print("Wallet Payment Invoice:\n", invoice)
+
+    print("\nAll scenarios executed ")

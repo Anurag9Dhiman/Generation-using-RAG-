@@ -1,0 +1,377 @@
+# Week 3 Assignment
+**Topic: Encapsulation, Properties, Composition, and Inheritance**
+
+**Note**: Write your answer directly below each question.
+
+## Q1. Encapsulation and Properties 
+
+Define a class `BankAccount` with the following requirements:  
+1. Use **private attributes** `__balance` and `__owner`.  
+2. Implement getter and setter properties for balance with validation (balance cannot go below `0`).  
+3. Provide methods `deposit(amount)` and `withdraw(amount)` that modify the balance safely.  
+4. Demonstrate why behaviour-based methods (like `deposit`) are preferred over raw setters.
+
+*Hint*: Show what happens when direct balance manipulation is allowed vs. when encapsulation is enforced.
+
+
+class BankAccount:
+    def __init__(self, owner: str, initial_balance: float = 0.0):
+        self.__owner = owner
+        self.__balance = initial_balance
+    
+    # Getter for owner (no setter needed as owner shouldn't change)
+    @property
+    def owner(self):
+        return self.__owner
+    
+    # getter for balance 
+    @property
+    def balance(self):
+        return self.__balance
+    
+    # Setter for balance with validation
+    @balance.setter
+    def balance(self, amount):
+        if amount < 0:
+            raise ValueError("Balance cannot be negative.")
+        self.__balance = amount 
+
+    # Method to deposit money
+    def deposit(self, amount: float):
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive")
+        self.__balance += amount 
+        print(f"Deposited: ${amount:.2f}. New balance: ${self.__balance:.2f}")
+
+    # Method to withdraw money
+    def withdraw(self, amount: float):
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive")
+        if amount > self.__balance:
+            raise ValueError("Insufficient funds")
+        self.__balance -= amount
+        print(f"Withdraw: ${amount:.2f}. New balance: ${self.__balance:.2f}")
+
+    def __str__(self):
+        return f"Account owner: {self.owner}, Balance: ${self.balance:.2f}"
+    
+    def __repr__(self):
+        return f"BankAccount(owner='{self.owner}', initial_balance={self.balance})"
+
+    
+# Create Bank Account
+account = BankAccount("Alice", 1000.0)
+print(account)
+
+# Deposit money using the method
+account.deposit(200.0)
+
+# Withdraw money using the method
+account.withdraw(150.0)
+
+# Accessing balance using the getter property
+print(f"Current balance using getter: ${account.balance:.2f}")
+
+# Attempting to set balance directly using the setter (valid case)
+try:
+    account.balance = 500.0
+    print(f"Balance after valid setter: ${account.balance:.2f}")
+except ValueError as e:
+    print(f"Error setting balance directly: ")
+
+# Attempting to set balance directly using the setter (invalid case)
+try:
+    account.balance = -100.0
+except ValueError as e:
+    print(f"Error setting balance directly: {e}")
+
+# --------Why method are prefrerred----------
+# Let's imagine we could directly access the private attribute (which is not recommended)
+# In Python, name mangling makes it __BankAccount__balance, but we can still technically access it.
+# This shows how bypassing the methods and properties can lead to issues.
+
+print("\n---- Risk of bypassing encapsulation----")
+try:
+    print("attempting to directly modify the 'private' attribute... ")
+    account._BankAccount__balance = -500.0 # Directly modify the mangled name
+    print(f"Balance after direct (and incorrect) modification: ${account.balance:.2f}")
+    # Now if we try withdraw, it might behave unexpectedly
+    account.withdraw(100.0)
+except Exception as e:
+    print(f"An error occurred during direct modification demonstration: {e}")
+
+print("\n---Conclusion---")
+print("Using deposit() and withdraw() methods ensures that validation rules (like positive amounts and sufficient funds) are always applied.")
+print("The balance property with a setter allows controlled updates, but direct manipulation of the underlying attribute bypasses all validation, leading to potential inconsistencies and errors.")
+## Q2. Behavioural Encapsulation vs Data Exposure 
+
+Consider a `Student` class storing `marks` for 3 subjects.  
+
+1. Implement it with only getters/setters (data exposure).  
+2. Then, re-implement it using **behavioural encapsulation**, where you add a method `calculate_grade()` that internally computes grade instead of exposing marks directly.  
+3. Compare both implementations. Which design better follows the principle of *“Tell, don’t ask”*?
+
+#This implementation exposes the `marks` data directly through getter and setter methods.
+class StudentDataExposure:
+    def __init__(self, name: str, marks: list[int]):
+        if len(marks) != 3:
+            raise ValueError("Marks must be a list of 3 integers.")
+        if not all(0 <= mark <= 100 for mark in marks):
+            raise ValueError("Marks must be between 0 and 100.")
+        self.__name = name
+        self.__marks = marks
+
+    @property
+    def name(self):
+        return self.__name
+
+    @property
+    def marks(self):
+        return self.__marks
+
+    @marks.setter
+    def marks(self, new_marks: list[int]):
+        if len(new_marks) != 3:
+            raise ValueError("Marks must be a list of 3 integers.")
+        if not all(0 <= mark <= 100 for mark in new_marks):
+            raise ValueError("Marks must be between 0 and 100.")
+        self.__marks = new_marks
+
+    def __str__(self):
+        return f"Student: {self.name}, Marks: {self.marks}"
+
+    def __repr__(self):
+        return f"StudentDataExposure(name='{self.name}', marks={self.marks})"
+
+# Example usage:
+student1 = StudentDataExposure("Alice", [85, 90, 78])
+print(student1)
+print(f"Alice's marks: {student1.marks}")
+
+# To calculate the average grade with this approach, you need to get the marks and perform the calculation outside the class:
+average_marks_student1 = sum(student1.marks) / len(student1.marks)
+print(f"Alice's average marks (calculated externally): {average_marks_student1:.2f}")
+# This implementation encapsulates the logic for calculating the grade within the class itself, providing a method `calculate_grade()`.
+class StudentBehavioural:
+    def __init__(self, name: str, marks: list[int]):
+        if len(marks) != 3:
+            raise ValueError("Marks must be a list of 3 integers.")
+        if not all(0 <= mark <= 100 for mark in marks):
+            raise ValueError("Marks must be between 0 and 100.")
+        self.__name = name
+        self.__marks = marks
+
+    @property
+    def name(self):
+        return self.__name
+
+    # Note: We don't provide a public getter for the raw marks list here to encourage using the behaviour.
+    # If needed for internal use, a private method or property could be considered, but not for external use.
+
+    def calculate_grade(self) -> str:
+        """Calculates the average marks and returns a letter grade."""
+        average = sum(self.__marks) / len(self.__marks)
+        if average >= 90:
+            return "A"
+        elif average >= 80:
+            return "B"
+        elif average >= 70:
+            return "C"
+        elif average >= 60:
+            return "D"
+        else:
+            return "F"
+
+    def __str__(self):
+        return f"Student: {self.name}" # We can choose not to show marks directly in the string representation
+
+    def __repr__(self):
+        return f"StudentBehavioural(name='{self.name}', _marks={self.__marks})" # Include marks in repr for debugging
+
+# Example usage:
+student2 = StudentBehavioural("Bob", [75, 88, 92])
+print(student2)
+
+# To get the grade, we simply tell the object to calculate it:
+grade_student2 = student2.calculate_grade()
+print(f"Bob's grade (calculated internally): {grade_student2}")
+Let's compare the two implementations and see how they relate to the "Tell, Don't Ask" principle.
+
+**Data Exposure Implementation (`StudentDataExposure`):**
+
+*   **"Ask":** To get the average marks or calculate the grade, you have to "ask" the object for its internal data (`marks`) and then perform the calculation *outside* the object.
+*   **Coupling:** This creates tighter coupling between the client code (the code using the `Student` object) and the internal representation of the `Student`'s data. If the way marks are stored or calculated changes (e.g., adding more subjects, using weighted averages), the client code will likely need to be updated.
+*   **Violation of Encapsulation:** While getters and setters provide a layer of control over data access, they still expose the raw data, making the object's internal state more visible and potentially leading to logic being scattered outside the class.
+
+**Behavioural Encapsulation Implementation (`StudentBehavioural`):**
+
+*   **"Tell":** To get the grade, you "tell" the object to perform the action (`calculate_grade()`). The object knows how to calculate its own grade based on its internal state (`__marks`), and the client code doesn't need to know the details of how that calculation is done.
+*   **Decoupling:** This reduces coupling. The client code interacts with the object through its behavior (`calculate_grade()`) rather than its data. Changes to the internal calculation logic within `calculate_grade()` do not require changes to the client code, as long as the method signature remains the same.
+*   **Adherence to Encapsulation:** The internal data (`__marks`) is better protected. The object manages its own state and provides methods to perform operations on that state, keeping related data and behavior together.
+
+**Conclusion:**
+
+The **behavioural encapsulation** implementation (`StudentBehavioural`) better follows the principle of *"Tell, don't ask"*. Instead of asking the `Student` object for its marks and then calculating the grade externally, we tell the `Student` object to calculate its own grade. This results in a more cohesive class, reduced coupling, and better adherence to the principles of encapsulation.
+## Q3. Composition vs Inheritance  
+
+Create two designs for a `Car` system:  
+
+- **Inheritance-based**: A `Car` inherits from `Engine`.  
+- **Composition-based**: A `Car` *has an* `Engine` (composition).  
+
+1. Write minimal Python classes for both approaches.  
+2. Demonstrate how composition allows easier replacement (e.g., swapping a `PetrolEngine` with an `ElectricEngine`) compared to inheritance.  
+3. Conclude: In which case is composition preferable?
+# Create a base Engine class and derived classes like PetrolEngine and ElectricEngine.
+
+class Engine:
+    def start(self):
+        """Starts the engine."""
+        print("Engine starting.")
+
+class PetrolEngine(Engine):
+    def start(self):
+        """Starts the petrol engine."""
+        print("Petrol engine starting... Vroom!")
+
+class ElectricEngine(Engine):
+    def start(self):
+        """Starts the electric engine."""
+        print("Electric engine starting... Humm!")
+# Implement inheritance-based car
+class InheritanceCar(Engine):
+    def __init__(self):
+        super().__init__()
+
+    def drive(self):
+        print("Car is driving.")
+        self.start()
+
+# Implement composition-based car
+class CompositionCar:
+    def __init__(self, engine: Engine):
+        self.engine = engine
+
+    def drive(self):
+        print("Car is driving.")
+        self.engine.start()
+# Demonstrate flexibility
+# 1. Create an instance of InheritanceCar.
+inheritance_car = InheritanceCar()
+
+# 2. Call the drive() method on the InheritanceCar instance.
+print("--- Inheritance Car ---")
+inheritance_car.drive()
+
+# 3. Create an instance of CompositionCar with a PetrolEngine.
+petrol_engine = PetrolEngine()
+composition_car_petrol = CompositionCar(petrol_engine)
+
+# 4. Call the drive() method on the CompositionCar instance.
+print("\n--- Composition Car (Petrol) ---")
+composition_car_petrol.drive()
+
+# 5. Create another instance of CompositionCar with an ElectricEngine.
+electric_engine = ElectricEngine()
+composition_car_electric = CompositionCar(electric_engine)
+
+# 6. Call the drive() method on the second CompositionCar instance.
+print("\n--- Composition Car (Electric) ---")
+composition_car_electric.drive()
+
+# 7. Observe the output to see how the start() method differs based on the engine type in the composition-based car, highlighting the ease of swapping engines compared to the inheritance-based car.
+Inheritance (Car IS-A Engine) couples Car too tightly to one engine type → hard to extend or swap.
+
+Composition (Car HAS-A Engine) allows flexibility → easily swap PetrolEngine, ElectricEngine, HybridEngine, etc.
+Inheritance: No need to pass Engine at runtime, because Car is tightly bound to one engine type at compile time.
+
+Composition: You must pass an Engine object, because Car doesn’t “own” an engine definition — it delegates to whichever engine you inject.
+Composition is preferable when behavior can vary (like engines), because it promotes loose coupling, flexibility, and reusability.
+## Q4. Liskov Substitution Principle (LSP)  
+
+1. Create a class `Bird` with a method `fly()`.  
+2. Implement subclasses `Sparrow` (can fly) and `Penguin` (cannot fly).  
+3. Show how substituting `Penguin` for `Bird` breaks LSP.  
+4. Refactor the design using **composition** (e.g., `FlyBehavior`) so that LSP holds true.  
+
+*Hint*: Think about “is-a” vs “has-a” relationship while redesigning.
+# Step 1: Define Bird class
+class Bird:
+    def fly(self):
+        print("This bird can fly")
+
+# Step 2: Subclasses Sparrow and Penguin
+class Sparrow(Bird):
+    def fly(self):
+        print("Sparrow is flying")
+
+
+class Penguin(Bird):
+    def fly(self):
+        # Penguins cannot fly, but we are forced to implement this
+        raise NotImplementedError("Penguins cannot fly")
+
+The Liskov Substitution Principle (LSP) says:
+
+Objects of a superclass should be replaceable with objects of its subclasses without breaking the program.
+# Step 3: Breaking LSP
+def make_bird_fly(bird: Bird):
+    bird.fly()
+
+
+# Works fine
+sparrow = Sparrow()
+make_bird_fly(sparrow)
+
+# ❌ Breaks LSP: substituting Penguin causes runtime error
+penguin = Penguin()
+make_bird_fly(penguin)  
+
+This violates LSP because Penguin is not really a Bird-that-can-fly, but our design forces it into that role.
+Instead of making all Bird objects have a fly(), we delegate flying ability to a separate behavior class.
+# Step 4: Refactor using Composition (Strategy Pattern)
+class FlyBehavior:
+    def fly(self):
+        pass
+
+
+class CanFly(FlyBehavior):
+    def fly(self):
+        print("Flying high!")
+
+
+class CannotFly(FlyBehavior):
+    def fly(self):
+        print("I cannot fly.")
+
+# Bird Class (Has-a FlyBehavior)
+class Bird:
+    def __init__(self, fly_behavior: FlyBehavior):
+        self.fly_behavior = fly_behavior
+
+    def perform_fly(self):
+        self.fly_behavior.fly()
+
+# Subclasses
+class Sparrow(Bird):
+    def __init__(self):
+        super().__init__(CanFly())
+
+
+class Penguin(Bird):
+    def __init__(self):
+        super().__init__(CannotFly())
+
+# Step 5: LSP Holds Now
+def make_bird_fly(bird: Bird):
+    bird.perform_fly()
+
+
+sparrow = Sparrow()
+penguin = Penguin()
+
+make_bird_fly(sparrow)   #  "Flying high!"
+make_bird_fly(penguin)   # "I cannot fly."
+
+No exceptions, and all subclasses behave consistently with their parent contract.
+Now Penguin is a Bird that happens to have CannotFly behavior — LSP is satisfied

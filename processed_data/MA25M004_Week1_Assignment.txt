@@ -1,0 +1,185 @@
+# Week 1 Assignment: Python Refresher, Virtual Environments, and Type Hints
+
+## Assignment Objectives
+- Set up a Python virtual environment for project-level isolation.
+- Revisit Python core features: sequences, special methods, comprehensions.
+- Implement Pythonic and idiomatic designs using data model protocols.
+- Use and validate type hints with static checkers.
+- Gain hands-on understanding of Python’s dunder methods and type-based design.
+## Section 1: Environment Setup and Sanity Checks
+
+### Task 1.1: Create and Activate a Virtual Environment
+Run the following commands in your terminal:
+```bash
+python -m venv week1_env
+.\week1_env\Scripts\activate  # On Windows
+pip install mypy # in conda "conda install conda-forge::mypy"
+```
+
+### Task 1.2: Validate Environment
+Create a script that logs Python interpreter path and installed packages.
+
+!python3 -m venv week1_env
+!source week1_env/bin/activate
+!python3 -m pip install mypy
+
+import sys
+import subprocess
+
+print(f"Python executable: {sys.executable}")
+print("Installed packages:")
+subprocess.run([sys.executable, "-m", "pip", "list"])
+## Section 2: Python Sequences & Data Model
+
+### Task 2.1: Implement Extended FrenchDeck
+Implement the classic FrenchDeck with enhancements and type hints.
+#TODO - Remove the pass statement and write your code
+
+import collections
+import random
+from typing import List, Any, Iterator, NamedTuple
+
+# Define a Card as an immutable named tuple with two attributes: rank and suit
+class Card(NamedTuple):
+    rank: str  # e.g., '2', 'J', 'A'
+    suit: str  # e.g., 'hearts', 'spades'
+
+class FrenchDeck:
+    # Class-level attributes representing the 13 ranks and 4 suits in a standard deck
+    ranks: List[str] = [str(n) for n in range(2, 11)] + list('JQKA')  # '2' to '10', then Jack, Queen, King, Ace
+    suits: List[str] = 'spades diamonds clubs hearts'.split()  # Four traditional suits
+
+    def __init__(self) -> None:
+        """
+        Initialize a standard deck of 52 playing cards.
+        Each card is represented as a Card(rank, suit).
+        The full deck is stored in a private list called self._cards.
+        """
+       
+        self._cards: List[Card] = [Card(rank, suit) for suit in self.suits for rank in self.ranks] # use list comprehension to create the deck
+
+    def __len__(self) -> int:
+        """
+        Return the number of cards in the deck.
+        Enables the use of `len(deck)` to find the number of cards.
+        """
+        return len(self._cards)
+ 
+
+    def __getitem__(self, position: int) -> Card:
+        """
+        Return the card at a given position.
+        Enables indexing and slicing, like `deck[0]` or `deck[:5]`.
+        Required for compatibility with Python's sequence protocols.
+        """
+        return self._cards[position]
+ 
+
+    def __setitem__(self, position: int, value: Card) -> None:
+        """
+        Allows setting a card at a given position (mutability).
+        Required to support in-place operations like `random.shuffle(deck)`.
+        """
+        self._cards[position] = value
+ 
+
+    def __contains__(self, card: Any) -> bool:
+        """
+        Return True if the given card is in the deck.
+        Enables use of the `in` keyword, e.g., `Card('Q', 'hearts') in deck`.
+        """
+        return card in self._cards # use in operator to check membership
+
+    def __str__(self) -> str:
+        """
+        Return a user-friendly string representation of the deck.
+        Called when you use `print(deck)`.
+        Example output: "FrenchDeck of 52 cards"
+        """
+        return f"FrenchDeck of {len(self)} cards"
+ 
+
+    def __repr__(self) -> str:
+        """
+        Return a developer-friendly string representation.
+        Helpful for debugging or logging.
+        Example: "FrenchDeck([...])"
+        """
+        return f"FrenchDeck({self._cards!r})"
+  
+
+    def __iter__(self) -> Iterator[Card]:
+        """
+        Return an iterator over the deck.
+        Enables looping like `for card in deck: ...`
+        """
+        return iter(self._cards)
+
+### Task 2.2: Unit Test FrenchDeck
+deck = FrenchDeck()
+assert len(deck) == 52 # assert is used to check if the deck has 52 cards
+assert deck[0] == Card('2', 'spades')
+assert Card('Q', 'hearts') in deck
+print(deck[:3])  # slicing
+random.shuffle(deck)
+print(deck[:3])  # confirm shuffle
+print("All tests passed.")
+## Section 3: Data Model & Type Hints
+
+### Task 3.1: Build a Type-Hinted Vector2D Class
+%%writefile temp_example.py
+import math
+from typing import Any
+
+# TODO: Add appropriate type hints to each method and attribute in the class
+
+
+class Vector2D:
+    x: float
+    y: float
+    
+    def __init__(self, x: float =0, y: float =0) -> None:
+        
+        # TODO: Store x and y as attributes
+        self.x = x
+        self.y = y
+
+    def __repr__(self) -> str:
+        # TODO: Return a string representation of the vector
+        return f"Vector2D({self.x}, {self.y})"
+
+
+    def __abs__(self) -> float:
+        # TODO: Return the magnitude of the vector using math.hypot
+        return math.hypot(self.x, self.y)
+
+
+    def __add__(self, other:Any) -> 'Vector2D':
+        # TODO: Return the vector sum of self and other
+        if not isinstance(other, Vector2D):
+            return Vector2D(self.x + other.x, self.y + other.y)
+        return NotImplemented
+
+    def __mul__(self, scalar:float) -> 'Vector2D':
+        # TODO: Return the scalar multiplication of this vector
+        return Vector2D(self.x * scalar, self.y * scalar)
+
+    def __bool__(self) -> bool:
+        # TODO: Return True if vector is non-zero, else False
+        return bool(self.x or self.y)
+
+
+    def __eq__(self, other: Any) -> bool:
+        # TODO: Return True if self and other are equal vectors
+        return isinstance(other, Vector2D) and self.x == other.x and self.y == other.y
+
+
+# Example usage (for testing after annotation):
+v1 = Vector2D(3, 4)
+v2 = Vector2D(1, 2)
+print(v1 + v2)
+print(abs(v1))
+print(v1 * 2)
+print(bool(Vector2D()))
+print(v1 == Vector2D(3, 4))
+!mypy temp_example.py

@@ -1,0 +1,364 @@
+#Question
+
+Write general classes for Stack, Queue, and Circular Queue that can be implemented using multiple underlying data structures (such as List, Linked List, or any other) through an abstract or generic design.
+from abc import ABC, abstractmethod
+from typing import Generic, TypeVar, Optional
+
+T = TypeVar("T")
+
+# Abstract Storage interface
+
+class Storage(ABC, Generic[T]):
+    """Abstract storage interface supporting front/back operations.
+       This is intentionally slightly richer so Stack/Queue/CircularQueue
+       can be implemented on top without touching internals.
+    """
+
+    @abstractmethod
+    def add_back(self, item: T) -> None:
+        """Add item to back (enqueue / push at end)."""
+        pass
+
+    @abstractmethod
+    def remove_back(self) -> T:
+        """Remove item from back (pop from end)."""
+        pass
+
+    @abstractmethod
+    def add_front(self, item: T) -> None:
+        """Add item to front (push front)."""
+        pass
+
+    @abstractmethod
+    def remove_front(self) -> T:
+        """Remove item from front (dequeue / pop from front)."""
+        pass
+
+    @abstractmethod
+    def peek_front(self) -> Optional[T]:
+        pass
+
+    @abstractmethod
+    def peek_back(self) -> Optional[T]:
+        pass
+
+    @abstractmethod
+    def is_empty(self) -> bool:
+        pass
+
+    @abstractmethod
+    def is_full(self) -> bool:
+        pass
+
+    @abstractmethod
+    def size(self) -> int:
+        pass
+
+# List-backed storage
+
+class ListStorage(Storage[T]):
+    def __init__(self, capacity: Optional[int] = None):
+        self._data: list[T] = []
+        self.capacity = capacity
+
+    def add_back(self, item: T) -> None:
+        if self.is_full():
+            raise OverflowError("Storage full")
+        self._data.append(item)
+
+    def remove_back(self) -> T:
+        if self.is_empty():
+            raise IndexError("Storage empty")
+        return self._data.pop()
+
+    def add_front(self, item: T) -> None:
+        if self.is_full():
+            raise OverflowError("Storage full")
+        self._data.insert(0, item)
+
+    def remove_front(self) -> T:
+        if self.is_empty():
+            raise IndexError("Storage empty")
+        return self._data.pop(0)
+
+    def peek_front(self) -> Optional[T]:
+        return None if self.is_empty() else self._data[0]
+
+    def peek_back(self) -> Optional[T]:
+        return None if self.is_empty() else self._data[-1]
+
+    def is_empty(self) -> bool:
+        return len(self._data) == 0
+
+    def is_full(self) -> bool:
+        return self.capacity is not None and len(self._data) >= self.capacity
+
+    def size(self) -> int:
+        return len(self._data)
+
+# LinkedList-backed storage
+
+class _Node(Generic[T]):
+    __slots__ = ("val", "next")
+    def __init__(self, val: T):
+        self.val = val
+        self.next: Optional[_Node[T]] = None
+
+class LinkedListStorage(Storage[T]):
+    def __init__(self, capacity: Optional[int] = None):
+        self.head: Optional[_Node[T]] = None  # front
+        self.tail: Optional[_Node[T]] = None  # back
+        self._count = 0
+        self.capacity = capacity
+
+    def add_back(self, item: T) -> None:
+        if self.is_full():
+            raise OverflowError("Storage full")
+        node = _Node(item)
+        if self.tail is None:
+            self.head = self.tail = node
+        else:
+            self.tail.next = node
+            self.tail = node
+        self._count += 1
+
+    def remove_back(self) -> T:
+        if self.is_empty():
+            raise IndexError("Storage empty")
+        # removing from back in singly linked list costs O(n) — acceptable for demonstration
+        prev = None
+        cur = self.head
+        while cur is not None and cur.next is not None:
+            prev = cur
+            cur = cur.next
+        assert cur is not None
+        value = cur.val
+        if prev is None:
+            # single element
+            self.head = self.tail = None
+        else:
+            prev.next = None
+            self.tail = prev
+        self._count -= 1
+        return value
+
+    def add_front(self, item: T) -> None:
+        if self.is_full():
+            raise OverflowError("Storage full")
+        node = _Node(item)
+        node.next = self.head
+        self.head = node
+        if self.tail is None:
+            self.tail = node
+        self._count += 1
+
+    def remove_front(self) -> T:
+        if self.is_empty():
+            raise IndexError("Storage empty")
+        assert self.head is not None
+        val = self.head.val
+        self.head = self.head.next
+        if self.head is None:
+            self.tail = None
+        self._count -= 1
+        return val
+
+    def peek_front(self) -> Optional[T]:
+        return None if self.head is None else self.head.val
+
+    def peek_back(self) -> Optional[T]:
+        return None if self.tail is None else self.tail.val
+
+    def is_empty(self) -> bool:
+        return self._count == 0
+
+    def is_full(self) -> bool:
+        return self.capacity is not None and self._count >= self.capacity
+
+    def size(self) -> int:
+        return self._count
+
+# Stack using Storage (LIFO)
+
+class Stack(Generic[T]):
+    def __init__(self, storage: Storage[T]):
+        self._s = storage
+
+    def push(self, item: T) -> None:
+        # push at back, pop from back -> LIFO
+        self._s.add_back(item)
+
+    def pop(self) -> T:
+        return self._s.remove_back()
+
+    def peek(self) -> Optional[T]:
+        return self._s.peek_back()
+
+    def is_empty(self) -> bool:
+        return self._s.is_empty()
+
+    def size(self) -> int:
+        return self._s.size()
+
+# Queue using Storage (FIFO)
+
+class Queue(Generic[T]):
+    def __init__(self, storage: Storage[T]):
+        self._s = storage
+
+    def enqueue(self, item: T) -> None:
+        self._s.add_back(item)
+
+    def dequeue(self) -> T:
+        return self._s.remove_front()
+
+    def peek(self) -> Optional[T]:
+        return self._s.peek_front()
+
+    def is_empty(self) -> bool:
+        return self._s.is_empty()
+
+    def size(self) -> int:
+        return self._s.size()
+
+# CircularQueue (array-backed)
+
+class CircularQueue(Generic[T]):
+    def __init__(self, capacity: int):
+        if capacity <= 0:
+            raise ValueError("capacity must be > 0")
+        self._cap = capacity
+        self._data: list[Optional[T]] = [None] * capacity
+        self._front = 0
+        self._size = 0
+
+    def enqueue(self, item: T) -> None:
+        if self.is_full():
+            raise OverflowError("Circular Queue Full")
+        idx = (self._front + self._size) % self._cap
+        self._data[idx] = item
+        self._size += 1
+
+    def dequeue(self) -> T:
+        if self.is_empty():
+            raise IndexError("Circular Queue Empty")
+        item = self._data[self._front]
+        # clear reference (optional)
+        self._data[self._front] = None
+        self._front = (self._front + 1) % self._cap
+        self._size -= 1
+        assert item is not None
+        return item
+
+    def peek(self) -> Optional[T]:
+        return None if self.is_empty() else self._data[self._front]
+
+    def is_empty(self) -> bool:
+        return self._size == 0
+
+    def is_full(self) -> bool:
+        return self._size == self._cap
+
+    def size(self) -> int:
+        return self._size
+
+# Optional: wrap CircularQueue as Storage
+
+class CircularArrayStorage(Storage[T]):
+    def __init__(self, capacity: int):
+        self._cq = CircularQueue[T](capacity)
+
+    def add_back(self, item: T) -> None:
+        self._cq.enqueue(item)
+
+    def remove_back(self) -> T:
+        # to remove back we must rotate; implement naive O(n) approach
+        if self.is_empty():
+            raise IndexError("Storage empty")
+        temp = []
+        while self._cq.size() > 1:
+            temp.append(self._cq.dequeue())
+        last = self._cq.dequeue()
+        for v in temp:
+            self._cq.enqueue(v)
+        return last
+
+    def add_front(self, item: T) -> None:
+        # naive O(n) — enqueue then rotate existing elements
+        n = self._cq.size()
+        if self.is_full():
+            raise OverflowError("Storage full")
+        self._cq.enqueue(item)
+        # rotate to bring item to front
+        for _ in range(n):
+            self._cq.enqueue(self._cq.dequeue())
+
+    def remove_front(self) -> T:
+        return self._cq.dequeue()
+
+    def peek_front(self) -> Optional[T]:
+        return self._cq.peek()
+
+    def peek_back(self) -> Optional[T]:
+        if self.is_empty():
+            return None
+        # get back by dequeuing all then re-enqueueing (O(n))
+        temp = []
+        while self._cq.size() > 0:
+            temp.append(self._cq.dequeue())
+        back = temp[-1]
+        for v in temp:
+            self._cq.enqueue(v)
+        return back
+
+    def is_empty(self) -> bool:
+        return self._cq.is_empty()
+
+    def is_full(self) -> bool:
+        return self._cq.is_full()
+
+    def size(self) -> int:
+        return self._cq.size()
+
+#  tests
+
+if __name__ == "__main__":
+    print("=== Stack with LinkedListStorage ===")
+    s_link = Stack[int](LinkedListStorage())
+    s_link.push(1)
+    s_link.push(2)
+    s_link.push(3)
+    print("peek:", s_link.peek())   # 3
+    print("pop:", s_link.pop())     # 3
+    print("size:", s_link.size())   # 2
+
+    print("\n=== Queue with LinkedListStorage ===")
+    q_link = Queue[str](LinkedListStorage())
+    q_link.enqueue("a")
+    q_link.enqueue("b")
+    q_link.enqueue("c")
+    print("peek:", q_link.peek())   # a
+    print("dequeue:", q_link.dequeue())  # a
+    print("size:", q_link.size())   # 2
+
+    print("\n=== CircularQueue ===")
+    cq = CircularQueue(3)
+    cq.enqueue(10)
+    cq.enqueue(20)
+    cq.enqueue(30)
+    try:
+        cq.enqueue(40)
+    except OverflowError as e:
+        print("expected overflow:", e)
+    print("dequeue:", cq.dequeue())  # 10
+    cq.enqueue(40)
+    print("peek:", cq.peek())        # 20
+
+    print("\n=== Stack with ListStorage ===")
+    s_list = Stack[ListStorage[int]](ListStorage())
+    s_list.push(100)
+    s_list.push(200)
+    print(s_list.pop())  # 200
+
+    print("\nAll tests done.")
+

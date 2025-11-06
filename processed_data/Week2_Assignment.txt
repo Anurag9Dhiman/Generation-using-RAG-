@@ -1,0 +1,501 @@
+# Week 2 Lab - Objects, Namespaces, and Special Methods
+
+**Duration**: 2 hours  
+
+**Instructions:**
+- Read the instructions carefully for each part.
+- Write clean, well-documented code.
+- Add markdown explanations where needed.
+
+
+### Object Identity vs Equality
+
+Create a `Book` class with attributes like title, author, and ISBN. Override the `__eq__` method so that two books are considered equal **if they have the same ISBN**.
+
+- Demonstrate the use of `is` and `==`.
+- Print object IDs and compare identity vs equality.
+
+
+# Define a class Book with attributes title, author, and isbn.
+# Implement the __eq__ method so that two Book objects are considered equal
+# if their ISBN numbers are the same.
+
+class Book:
+    def __init__(self, title, author, isbn):
+        # TODO: initialize the attributes title, author, isbn
+        #pass
+        self.title = title
+        self.author = author
+        self.isbn = isbn
+    def __eq__(self, other):
+        # TODO: implement equality check based on ISBN
+        #pass
+        if isinstance(other, Book):
+            return self.isbn == other.isbn
+        return False
+
+
+# Create book objects
+book1 = Book("Python 101", "Alice", "123456")
+book2 = Book("Python Basics", "Alice", "123456")
+book3 = book1
+
+# Test equality vs identity
+print("book1 == book2:", book1 == book1)   
+print("book1 is book2:", book1 is book2)   
+print("book1 is book3:", book1 is book3)   
+
+# Print object IDs
+print("id(book1):", id(book1))      
+print("id(book2):", id(book2))      
+print("id(book3):", id(book3))      
+
+
+
+### 2D Vector Class
+
+Design a class `Vector2D` with:
+- attributes: x, y
+- `__init__`, `__str__`, and `__repr__`
+- arithmetic operator overloads: `+`, `-`, `*`, `/`
+- a `magnitude()` method
+
+import math
+
+class Vector2D:
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    # Step 1: Write the constructor (__init__) to initialize x and y
+    
+    # Step 2: Write a __str__ method to return the vector in "(x, y)" format
+    def __str__(self):
+        return f"{self.x}, {self.y}"
+    
+    # Step 3: Write an __add__ method to add two Vector2D objects
+    def __add__(self, other):
+        return Vector2D(self.x + other.x, self.y + other.y)
+    
+    # Step 4: Write a __sub__ method to subtract one Vector2D from another
+    def __sub__(self, other):
+        return vector2D(self.x - other.x, self.y - other.y)
+    
+    # Step 5: Write a __mul__ method to multiply the vector by a scalar
+    def __mul__(self,scaler):
+        return vector2D(self.x * scaler, self.y * scaler)
+    
+    # Step 6: Write a magnitude() method to return the length of the vector
+    def magnitude(self):
+        return math.sqrt(self.x**2 + self.y**2)
+
+
+# -------- Testing the Vector2D class --------
+v1 = Vector2D(3, 4)
+v2 = Vector2D(1, 2)
+
+# TODO: Print the result of v1 + v2
+print("v1 + v2 =", v1+v2)
+
+# TODO: Print the magnitude of v1
+print("[v1] =", v1.magnitude())
+###  n-Dimensional Vector
+
+Generalize the class to handle n-dimensions:
+- Use `*args` for coordinates
+- Add `dot()` and `normalize()` methods
+
+import math
+
+class VectorND:
+    # Step 1: Write the constructor to accept any number of coordinates
+    def __init__(self, *coords):
+        self.coords = coords
+    
+    # Step 2: Write a __str__ method to return coordinates in tuple form
+    def __str__(self):
+        return str(self.coords)
+    
+    # Step 3: Write an __add__ method to add two vectors element-wise
+    def __add__(self, other):
+        if len(self.coords) != len(other.coords):
+            raise ValueError("Vectors must be of the same dimension")
+        return VectorND(*(a + b for a, b in zip(self.coords, other.coords)))
+    
+    # Step 4: Write a __sub__ method to subtract two vectors element-wise
+    def __sub__(self, other):
+        if len(self.coords) != len(other.coords):
+            raise ValueError("vectors must be of same dimension")
+        return VectorND(*(a - b for a, b in zip(self.coords, other.coords)))
+    
+    # Step 5: Write a dot() method to compute dot product of two vectors
+    def dot(self, other):
+        if len(self.coords) != len(other.coords):
+            raise ValueError("Vectors must be of same dimension")
+        return sum(a*b for a, b in zip(self.coords, other.coords))
+
+    
+    # Step 6: Write a magnitude() method to compute vector length
+    def magnitude(self):
+        return math.sqrt(sum(c**2 for c in self.coords))
+
+    
+    # Step 7: Write a normalize() method to return the unit vector
+    def normalize(self):
+        mag = self.magnitude()
+        if mag == 0:
+            raise ValueError("Cannot normalize zero vector")
+        return VectorND(*(c/mag for c in self.coords))
+
+
+# -------- Testing the VectorND class --------
+v3 = VectorND(1, 2, 3)
+v4 = VectorND(4, 5, 6)
+
+# TODO: Print the result of v3 + v4
+print("v3 + v4 =", v3+v4)
+
+# TODO: Print the dot product of v3 and v4
+print("v3 . v4 =", v3.dot(v4))
+
+
+
+### Point2D Class
+
+- Attributes: x, y
+- Methods: `__init__`, `__str__`, `distance_to(other)`
+
+import math
+
+class Point2D:
+    # Step 1: Write the constructor (__init__) to initialize x and y
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    # Step 2: Write a __str__ method to display the point as "Point(x, y)"
+    def __str__(self):
+        return f"Point({self.x}, {self.y})"
+
+    
+    # Step 3: Write a distance_to() method to calculate distance 
+    #         between two points using math.hypot()
+    def distance_to(self, other):
+        return math.hypot(self.x - other.x, self.y - other.y)
+
+
+
+# -------- Testing the Point2D class --------
+p1 = Point2D(0, 0)
+p2 = Point2D(3, 4)
+
+# TODO: Print p1
+print("p1 =", p1)
+print("p2 =", p2)
+
+# TODO: Print the distance between p1 and p2
+
+print("Distance between p1 and p2 =", p1.distance_to(p2))
+### Line2D Class
+
+- Uses two `Point2D` instances
+- Add methods: `length()`, `is_horizontal()`, `is_vertical()`
+
+
+class Line2D:
+    # Step 1: Write the constructor (__init__) to accept two Point2D objects
+    def __init__(self, p1, p2):
+        self.p1 = p1
+        self.p2 = p2
+    
+    
+    # Step 2: Write a length() method to compute the distance between p1 and p2
+    def Length(self):
+        return self.p1.distance_to(self.p2)
+
+    
+    # Step 3: Write an is_horizontal() method that checks if the line is horizontal
+    def is_horizontal(self):
+        return self.p1.y == self.p2.y
+
+    
+    # Step 4: Write an is_vertical() method that checks if the line is vertical
+    def is_vertical(self):
+        return self.p1.x == self.p2.x
+
+
+# -------- Testing the Line2D class --------
+line = Line2D(Point2D(0, 0), Point2D(0, 5))
+
+# TODO: Print the length of the line
+print("Length of the Line =", line.Length())
+
+# TODO: Check if the line is vertical
+print("Is the line vertical?", line.is_vertical())
+
+
+### Polygon Class
+
+- Takes list of `Point2D`
+- Compute: perimeter, check if closed
+
+# Assume Point2D class is already defined.
+
+class Polygon:
+    # Step 1: Write the constructor (__init__) to store points in a list
+    def __init__(self, *points):
+        self.points = list(points) 
+    
+    # Step 2: Write an is_closed() method that checks if first and last points are the same
+    def is_closed(self):
+        return self.points[0] == self.points[-1]
+    
+    # Step 3: Write a perimeter() method to:
+    #         - Add distances between consecutive points
+    #         - If polygon not closed, add distance between last and first point
+    def perimeter(self):
+        peri = 0
+        for i in range(len(self.points) - 1):
+            peri += self.points[i].distance_to(self.points[i+1])
+        if not self.is_closed():
+            peri += self.points[-1].distance_to(self.points[0])
+        return peri
+
+
+
+# -------- Testing the Polygon class --------
+triangle = Polygon(Point2D(0, 0), Point2D(3, 0), Point2D(3, 4), Point2D(0, 0))
+
+# TODO: Print the perimeter of the triangle
+print("Perimter of the triangle =", triangle.perimeter())
+
+
+
+# TODO: Check if the polygon is closed
+print("is polygon closed", triangle.is_closed())
+
+
+## Singleton Pattern
+
+Create a Singleton Logger class. Only one instance should exist.
+
+Use `__new__` to restrict instantiation.
+
+class SingletonLogger:
+    # Step 1: Define a class variable to store the single instance (initially None)
+    _instance = None
+
+
+    def __new__(cls):
+        # Step 2: Check if an instance already exists
+        #         - If not, create a new one and print "New instance created"
+        #         - If yes, return the existing instance
+        if cls._instance is None:
+            cls._instance = super(SingletonLogger, cls).__new__(cls)
+            print("New instance created")
+        return cls._instance
+
+
+
+# -------- Testing the SingletonLogger class --------
+logger1 = SingletonLogger()
+logger2 = SingletonLogger()
+
+# TODO: Check if both loggers are the same instance
+# Expected: True
+print("Same instance?", logger1 is logger2)
+# Advanced Rational Arithmetic System
+
+## A: Core Implementation
+
+- Implement:
+    - `__init__`, `__str__`, `__repr__`
+    - Reduce to lowest terms using `math.gcd`
+    - Ensure denominator is always positive
+    - Handle zero denominator (raise `ZeroDivisionError`)
+    - Define arithmetic operators: `+`, `-`, `*`, `/`
+
+## B: Extended Operations
+
+- Add:
+    - `__eq__`, `__lt__`, `__le__`, `__gt__`, `__ge__`
+    - `as_float()` method
+    - `invert()` and `negate()` methods
+
+
+## C: Canonical Form and Mixed Form
+-
+    - `to_mixed()` method: Convert `7/3` → `"2 1/3"`
+    - `from_mixed(cls, whole: int, num: int, denom: int)` classmethod
+    - Add `__hash__()` and use Rational as keys in a dictionary
+
+
+## D: Namespace Design
+-
+    - Add class-level counter to track how many `Rational` objects have been created.
+    - Use it to explore namespace separation between class and instance.
+
+## E: Application Problem
+
+- Implement a class `RationalMatrix` to store 2x2 matrices of rational numbers (of above class)
+    - Support matrix multiplication and determinant
+    - Automatically simplify all entries 
+# write your answer
+import math
+
+class Rational:
+    # Class-level counter
+    _count = 0
+
+    def __init__(self, numerator: int, denominator: int = 1):
+        if denominator == 0:
+            raise ZeroDivisionError("Denominator cannot be zero.")
+        # Ensure denominator always positive
+        if denominator < 0:
+            numerator, denominator = -numerator, -denominator
+        # Reduce to lowest terms
+        gcd = math.gcd(numerator, denominator)
+        self.num = numerator // gcd
+        self.den = denominator // gcd
+        # Update class counter
+        Rational._count += 1
+
+    def __str__(self):
+        return f"{self.num}/{self.den}" if self.den != 1 else f"{self.num}"
+
+    def __repr__(self):
+        return f"Rational({self.num}, {self.den})"
+
+    # Arithmetic operators
+    def __add__(self, other):
+        if isinstance(other, Rational):
+            return Rational(
+                self.num * other.den + other.num * self.den,
+                self.den * other.den
+            )
+        return NotImplemented
+
+    def __sub__(self, other):
+        if isinstance(other, Rational):
+            return Rational(
+                self.num * other.den - other.num * self.den,
+                self.den * other.den
+            )
+        return NotImplemented
+
+    def __mul__(self, other):
+        if isinstance(other, Rational):
+            return Rational(
+                self.num * other.num,
+                self.den * other.den
+            )
+        return NotImplemented
+
+    def __truediv__(self, other):
+        if isinstance(other, Rational):
+            if other.num == 0:
+                raise ZeroDivisionError("Division by zero Rational.")
+            return Rational(
+                self.num * other.den,
+                self.den * other.num
+            )
+        return NotImplemented
+
+    # Comparisons
+    def __eq__(self, other):
+        return isinstance(other, Rational) and \
+               self.num == other.num and self.den == other.den
+
+    def __lt__(self, other):
+        return (self.num * other.den) < (other.num * self.den)
+
+    def __le__(self, other):
+        return self == other or self < other
+
+    def __gt__(self, other):
+        return not self <= other
+
+    def __ge__(self, other):
+        return not self < other
+
+    # Hash support (to allow dictionary keys)
+    def __hash__(self):
+        return hash((self.num, self.den))
+
+    # Utility methods
+    def as_float(self):
+        return self.num / self.den
+
+    def invert(self):
+        if self.num == 0:
+            raise ZeroDivisionError("Cannot invert zero.")
+        return Rational(self.den, self.num)
+
+    def negate(self):
+        return Rational(-self.num, self.den)
+
+    # Mixed form conversion
+    def to_mixed(self):
+        whole = self.num // self.den
+        remainder = abs(self.num % self.den)
+        if remainder == 0:
+            return str(whole)
+        if whole == 0:
+            return f"{remainder}/{self.den}"
+        return f"{whole} {remainder}/{self.den}"
+
+    @classmethod
+    def from_mixed(cls, whole: int, num: int, denom: int):
+        if denom == 0:
+            raise ZeroDivisionError("Denominator cannot be zero.")
+        sign = -1 if whole < 0 else 1
+        numerator = abs(whole) * denom + num
+        return cls(sign * numerator, denom)
+
+    @classmethod
+    def get_count(cls):
+        return cls._count
+
+
+class RationalMatrix:
+    def __init__(self, a: Rational, b: Rational, c: Rational, d: Rational):
+        self.a, self.b, self.c, self.d = a, b, c, d
+
+    def __str__(self):
+        return f"[[{self.a}, {self.b}], [{self.c}, {self.d}]]"
+
+    def determinant(self):
+        return self.a * self.d - self.b * self.c
+
+    def multiply(self, other: 'RationalMatrix'):
+        if not isinstance(other, RationalMatrix):
+            return NotImplemented
+        return RationalMatrix(
+            self.a * other.a + self.b * other.c,
+            self.a * other.b + self.b * other.d,
+            self.c * other.a + self.d * other.c,
+            self.c * other.b + self.d * other.d
+        )
+
+
+# -------- Testing --------
+r1 = Rational(2, 4)        # 1/2
+r2 = Rational(3, 6)        # 1/2
+r3 = Rational(7, 3)        # 7/3
+
+print("r1 =", r1)          # 1/2
+print("r1 + r2 =", r1 + r2)  # 1
+print("r3 to mixed:", r3.to_mixed())  # "2 1/3"
+print("Invert r1:", r1.invert())
+print("As float:", r3.as_float())
+
+# Dictionary usage
+my_dict = {r1: "Half"}
+print("Dict lookup:", my_dict[Rational(1, 2)])
+
+# Matrix test
+m1 = RationalMatrix(r1, r2, r2, r1)
+m2 = RationalMatrix(r1, r1, r1, r1)
+print("Matrix product:", m1.multiply(m2))
+print("Determinant:", m1.determinant())
+print("Rational object count:", Rational.get_count())
+
