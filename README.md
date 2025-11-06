@@ -1,7 +1,7 @@
 # Generation-using-RAG-
 An Object-Oriented Retrieval-Augmented Generation (RAG) system that uses academic assignments as a knowledge base to generate accurate, context-aware solutions using open-source NLP tools.
 
-# Assignment RAG Project
+# RAG Project
 
 Open-source RAG (Retrieval-Augmented Generation) project that uses assignment materials as a local knowledge base. Uses embeddings + Chroma (vector DB) for retrieval and a Hugging Face model for generation.
 
